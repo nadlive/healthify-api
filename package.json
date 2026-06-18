@@ -1,0 +1,53 @@
+{
+  "name": "api-consolidated",
+  "version": "1.0.0",
+  "description": "Unified API combining all Healthify microservices",
+  "main": "server.js",
+  "scripts": {
+    "start": "node TZ=UTC server.js",
+    "dev": "nodemon server.js",
+    "db:seed": "node scripts/seed.js",
+    "db:sync": "node scripts/db-sync.js",
+    "db:remove": "node scripts/remove.js",
+    "test": "jest --runInBand",
+    "format": "npx prettier --write .",
+    "format:check": "npx prettier --check .",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.953.0",
+    "@aws-sdk/s3-request-presigner": "^3.953.0",
+    "axios": "^1.11.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "express-session": "^1.18.1",
+    "google-auth-library": "^9.15.1",
+    "jsonwebtoken": "^9.0.2",
+    "module-alias": "^2.3.4",
+    "morgan": "^1.10.1",
+    "multer": "^2.0.2",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "pdfkit": "^0.15.0",
+    "pg": "^8.16.3",
+    "pg-hstore": "^2.3.4",
+    "resend": "^6.4.2",
+    "sequelize": "^6.37.7",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "jest": "^30.2.0",
+    "nodemon": "^3.1.10",
+    "supertest": "^7.1.4",
+    "typescript": "^5.9.3"
+  },
+  "_moduleAliases": {
+    "@": "dist",
+    "@src": "src"
+  }
+}

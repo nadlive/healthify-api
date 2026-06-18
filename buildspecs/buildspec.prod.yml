@@ -1,0 +1,35 @@
+# Used by CodePipeline/CodeBuild. ECR_REPOSITORY_URI, IMAGE_REPO_NAME, AWS_REGION
+# are set by the pipeline (from infra stack outputs).
+version: 0.2
+
+env:
+  variables:
+    IMAGE_TAG: 'prod-latest'
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPOSITORY_URI
+      - |
+        echo 'Pulling previous image for layer cache (optional)'
+        docker pull $ECR_REPOSITORY_URI:$IMAGE_TAG || true
+        true
+      - echo Building PROD Docker image
+  build:
+    commands:
+      - echo 'Building the Docker image for PROD with ECR cache'
+      - docker build -f Dockerfile.prod --cache-from $ECR_REPOSITORY_URI:$IMAGE_TAG -t $IMAGE_REPO_NAME:$IMAGE_TAG .
+      - docker tag $IMAGE_REPO_NAME:$IMAGE_TAG $ECR_REPOSITORY_URI:$IMAGE_TAG
+  post_build:
+    commands:
+      - echo Pushing the Docker image to PROD ECR
+      - docker push $ECR_REPOSITORY_URI:$IMAGE_TAG
+      - echo Creating imagedefinitions.json
+      - echo "[{\"name\":\"backend\",\"imageUri\":\"$ECR_REPOSITORY_URI:$IMAGE_TAG\"}]" > imagedefinitions.json
+      - cat imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
+  base-directory: $CODEBUILD_SRC_DIR

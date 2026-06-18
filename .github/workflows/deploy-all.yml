@@ -1,0 +1,45 @@
+name: Deploy All Services (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      postgres:
+        description: 'Deploy PostgreSQL Database'
+        type: boolean
+        default: true
+      api:
+        description: 'Deploy API'
+        type: boolean
+        default: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # PostgreSQL Database
+  deploy-postgres:
+    if: ${{ github.event.inputs.postgres == 'true' }}
+    uses: ./.github/workflows/deploy-postgres.yml
+    secrets: inherit
+
+  # API
+  deploy-api:
+    needs: deploy-postgres
+    if: ${{ always() && github.event.inputs.api == 'true' }}
+    uses: ./.github/workflows/deploy-api.yml
+    secrets: inherit
+
+  # Summary
+  deployment-summary:
+    needs: [deploy-postgres, deploy-api]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deployment Summary
+        run: |
+          echo "Services deployed:"
+          ${{ github.event.inputs.postgres == 'true' }} && echo "  ✅ PostgreSQL (port 5432)" || true
+          ${{ github.event.inputs.api == 'true' }} && echo "  ✅ API (port 3010)" || true
+          echo ""
+          echo "✅ All selected services deployed!"

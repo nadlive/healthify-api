@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["dist/*"]
+    },
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "checkJs": false
+  },
+  "include": ["src/**/*.js", "server.js"],
+  "exclude": ["node_modules", "dist"]
+}

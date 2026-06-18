@@ -1,0 +1,61 @@
+# Environment files - should be provided at runtime via --env-file
+.env
+.env.*
+*.env
+
+# Git
+.git
+.gitignore
+
+# Node modules (already installed in image)
+node_modules
+
+# Documentation
+README.md
+*.md
+
+# Test files
+test
+tests
+*.test.js
+*.spec.js
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs
+
+# Temporary files
+tmp
+temp
+*.tmp
+
+# Database setup (not needed in API image)
+setup-db
+
+# Test scripts
+test-*.sh
+test-*.js
+check-*.sh
+
+# Build / CI (not needed in image)
+buildspecs
+.github
+
+# Optional: uncomment if you never serve Swagger from this image
+# src/config/swagger.identity.js
+

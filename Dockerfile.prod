@@ -1,0 +1,36 @@
+# ---- Builder: install deps and compile TypeScript ----
+FROM public.ecr.aws/docker/library/node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+
+# Install all deps (including dev) so we can run tsc
+RUN npm ci && npm cache clean --force
+
+COPY . .
+
+# Compile TS so dist/ exists for @/ routes (e.g. cron.appointments.routes)
+RUN npm run build
+
+# ---- Production: minimal runtime image ----
+FROM public.ecr.aws/docker/library/node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+
+# Production deps only in final image
+RUN npm ci --omit=dev && npm cache clean --force
+
+# Runtime needs: compiled dist/, server.js, and src/ (most routes use ./src/...)
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/server.js ./server.js
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/scripts ./scripts
+
+EXPOSE 3010
+ENV PORT=3010
+ENV NODE_ENV=production
+
+CMD ["node", "server.js"]
