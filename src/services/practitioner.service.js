@@ -5,6 +5,55 @@ const sequelize = require('../config/sequelize');
 const ProviderWorkingHours = require('../models/providerWorkingHours');
 const { sendConfirmationEmailToPractitioner } = require('./email.service');
 const { getActiveSubscriptionUsage } = require('./subscriptionUsage.service');
+const { normalizeLocalizedNames } = require('../models/practitioner.model');
+
+const getEnglishName = (names = []) =>
+  names.find((entry) => entry.language === 'English') || names[0] || {};
+
+const buildFullName = ({ prefix, firstName, lastName }) =>
+  [prefix, firstName, lastName].filter(Boolean).join(' ');
+
+const mapSpecialities = (specialities = []) =>
+  specialities.map((spec) => ({
+    id: spec.id,
+    name: spec.name,
+  }));
+
+const mapPractitionerResponse = (practitionerData) => {
+  const names = normalizeLocalizedNames(practitionerData);
+  const englishName = getEnglishName(names);
+  const prefix = englishName.prefix || practitionerData.prefix || '';
+  const firstName = englishName.firstName || practitionerData.firstName || '';
+  const lastName = englishName.lastName || practitionerData.lastName || '';
+
+  return {
+    practitionerId: practitionerData.practitioner_id,
+    active: practitionerData.isActive,
+    fullName: buildFullName({ prefix, firstName, lastName }),
+    names,
+    prefix,
+    firstName,
+    lastName,
+    email: practitionerData.email || '',
+    phone: practitionerData.phone || '',
+    gender: practitionerData.gender || '',
+    fee: practitionerData.fee || '',
+    specialities: mapSpecialities(practitionerData.specialities),
+    licenses: practitionerData.qualifications || [],
+  };
+};
+
+const resolveNameFields = (practitionerData = {}) => {
+  const names = normalizeLocalizedNames(practitionerData);
+  const englishName = getEnglishName(names);
+
+  return {
+    names,
+    prefix: englishName.prefix || null,
+    firstName: englishName.firstName || '',
+    lastName: englishName.lastName || '',
+  };
+};
 
 class PractitionerService {
   async getActivePractitioners(userId) {
@@ -24,36 +73,11 @@ class PractitionerService {
     });
 
     return practitioners.map((practitioner) => {
-      const practitionerData = practitioner.toJSON();
-      const fullName = [
-        practitionerData.prefix,
-        practitionerData.firstName,
-        practitionerData.lastName,
-      ]
-        .filter(Boolean)
-        .join(' ');
-
-      const specialities = (practitionerData.specialities || []).map(
-        (spec) => ({
-          id: spec.id,
-          name: spec.name,
-        }),
-      );
-
+      const mapped = mapPractitionerResponse(practitioner.toJSON());
       return {
-        practitionerId: practitionerData.practitioner_id,
-        active: practitionerData.isActive,
-        fullName,
-        prefix: practitionerData.prefix || '',
-        firstName: practitionerData.firstName,
-        lastName: practitionerData.lastName,
-        email: practitionerData.email || '',
-        phone: practitionerData.phone || '',
-        specialities: specialities,
-        licenses: practitionerData.qualifications || [],
-        fee: practitionerData.fee || '',
+        ...mapped,
         freeAppointmentBalance: subscriptionUsage.freeAppointmentBalance,
-        appointmentFee: practitionerData.fee || '',
+        appointmentFee: mapped.fee || '',
       };
     });
   }
@@ -68,6 +92,15 @@ class PractitionerService {
 
       if (user) {
         throw new Error('User already exists');
+      }
+
+      const { names, prefix, firstName, lastName } =
+        resolveNameFields(practitionerData);
+
+      if (!firstName || !lastName) {
+        throw new Error(
+          'Validation: English first name and last name are required',
+        );
       }
 
       const transaction = await sequelize.transaction();
@@ -93,9 +126,10 @@ class PractitionerService {
 
         const createdPractitioner = await Practitioner.create(
           {
-            firstName: practitionerData.firstName,
-            lastName: practitionerData.lastName,
-            prefix: practitionerData.prefix || null,
+            firstName,
+            lastName,
+            prefix,
+            names,
             email: practitionerData.email,
             gender: practitionerData.gender || '',
             phone: practitionerData.phone || '',
@@ -120,10 +154,16 @@ class PractitionerService {
           );
         }
 
-        await sendConfirmationEmailToPractitioner(practitionerData);
+        await sendConfirmationEmailToPractitioner({
+          ...practitionerData,
+          prefix,
+          firstName,
+          lastName,
+          names,
+        });
 
         await transaction.commit();
-        return createdPractitioner.toJSON();
+        return mapPractitionerResponse(createdPractitioner.toJSON());
       } catch (error) {
         await transaction.rollback();
         throw error;
@@ -152,34 +192,7 @@ class PractitionerService {
       return null;
     }
 
-    const practitionerData = practitioner.toJSON();
-    const fullName = [
-      practitionerData.prefix,
-      practitionerData.firstName,
-      practitionerData.lastName,
-    ]
-      .filter(Boolean)
-      .join(' ');
-
-    const specialities = (practitionerData.specialities || []).map((spec) => ({
-      id: spec.id,
-      name: spec.name,
-    }));
-
-    return {
-      practitionerId: practitionerData.practitioner_id,
-      active: practitionerData.isActive,
-      fullName,
-      prefix: practitionerData.prefix || '',
-      firstName: practitionerData.firstName,
-      lastName: practitionerData.lastName,
-      fee: practitionerData.fee,
-      email: practitionerData.email || '',
-      phone: practitionerData.phone || '',
-      gender: practitionerData.gender || '',
-      specialities: specialities,
-      licenses: practitionerData.qualifications || [],
-    };
+    return mapPractitionerResponse(practitioner.toJSON());
   }
 
   async updatePractitioner(practitionerId, updateData) {
@@ -200,12 +213,38 @@ class PractitionerService {
         }
 
         const updateFields = {
-          firstName: updateData.firstName,
-          lastName: updateData.lastName,
-          prefix: updateData.prefix !== undefined ? updateData.prefix : null,
           fee: updateData.fee,
           isActive: updateData.isActive,
         };
+
+        if (
+          updateData.names !== undefined ||
+          updateData.firstName !== undefined
+        ) {
+          const { names, prefix, firstName, lastName } =
+            resolveNameFields(updateData);
+
+          if (!firstName || !lastName) {
+            throw new Error(
+              'Validation: English first name and last name are required',
+            );
+          }
+
+          updateFields.names = names;
+          updateFields.prefix = prefix;
+          updateFields.firstName = firstName;
+          updateFields.lastName = lastName;
+        } else {
+          if (updateData.prefix !== undefined) {
+            updateFields.prefix = updateData.prefix;
+          }
+          if (updateData.firstName !== undefined) {
+            updateFields.firstName = updateData.firstName;
+          }
+          if (updateData.lastName !== undefined) {
+            updateFields.lastName = updateData.lastName;
+          }
+        }
 
         if (updateData.email !== undefined) {
           updateFields.email = updateData.email;
@@ -256,35 +295,7 @@ class PractitionerService {
           return null;
         }
 
-        const practitionerData = updatedPractitioner.toJSON();
-        const fullName = [
-          practitionerData.prefix,
-          practitionerData.firstName,
-          practitionerData.lastName,
-        ]
-          .filter(Boolean)
-          .join(' ');
-
-        const specialities = (practitionerData.specialities || []).map(
-          (spec) => ({
-            id: spec.id,
-            name: spec.name,
-          }),
-        );
-
-        return {
-          practitionerId: practitionerData.practitioner_id,
-          active: practitionerData.isActive,
-          fullName,
-          prefix: practitionerData.prefix || '',
-          firstName: practitionerData.firstName,
-          lastName: practitionerData.lastName,
-          email: practitionerData.email || '',
-          phone: practitionerData.phone || '',
-          fee: practitionerData.fee || 0,
-          specialities: specialities,
-          licenses: practitionerData.qualifications || [],
-        };
+        return mapPractitionerResponse(updatedPractitioner.toJSON());
       } catch (error) {
         await transaction.rollback();
         throw error;
@@ -310,36 +321,9 @@ class PractitionerService {
         ],
       });
 
-      return practitioners.map((practitioner) => {
-        const practitionerData = practitioner.toJSON();
-        const fullName = [
-          practitionerData.prefix,
-          practitionerData.firstName,
-          practitionerData.lastName,
-        ]
-          .filter(Boolean)
-          .join(' ');
-
-        const specialities = (practitionerData.specialities || []).map(
-          (spec) => ({
-            id: spec.id,
-            name: spec.name,
-          }),
-        );
-
-        return {
-          practitionerId: practitionerData.practitioner_id,
-          active: practitionerData.isActive,
-          fullName,
-          prefix: practitionerData.prefix || '',
-          firstName: practitionerData.firstName,
-          lastName: practitionerData.lastName,
-          email: practitionerData.email || '',
-          phone: practitionerData.phone || '',
-          specialities: specialities,
-          licenses: practitionerData.qualifications || [],
-        };
-      });
+      return practitioners.map((practitioner) =>
+        mapPractitionerResponse(practitioner.toJSON()),
+      );
     } catch (error) {
       throw error;
     }

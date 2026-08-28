@@ -1,13 +1,51 @@
 // models/practitioner.model.js
 
-class PractitionerModel {
-  constructor(data = {}) {
-    // Demographics
-    this.demographics = {
+const PRACTITIONER_LANGUAGES = ['English', 'Sinhala', 'Tamil'];
+
+const normalizeLocalizedNames = (data = {}) => {
+  if (Array.isArray(data.names) && data.names.length > 0) {
+    return PRACTITIONER_LANGUAGES.map((language) => {
+      const match = data.names.find(
+        (entry) =>
+          entry?.language === language ||
+          (language === 'English' && entry?.language === 'language1') ||
+          (language === 'Sinhala' && entry?.language === 'language2') ||
+          (language === 'Tamil' && entry?.language === 'language3'),
+      );
+      return {
+        language,
+        prefix: match?.prefix || '',
+        firstName: match?.firstName || '',
+        lastName: match?.lastName || '',
+      };
+    });
+  }
+
+  return [
+    {
+      language: 'English',
+      prefix: data.prefix || '',
       firstName: data.firstName || '',
       lastName: data.lastName || '',
+    },
+    { language: 'Sinhala', prefix: '', firstName: '', lastName: '' },
+    { language: 'Tamil', prefix: '', firstName: '', lastName: '' },
+  ];
+};
+
+class PractitionerModel {
+  constructor(data = {}) {
+    const names = normalizeLocalizedNames(data);
+    const englishName =
+      names.find((entry) => entry.language === 'English') || names[0];
+
+    // Demographics
+    this.demographics = {
+      names,
+      firstName: englishName?.firstName || data.firstName || '',
+      lastName: englishName?.lastName || data.lastName || '',
       middleName: data.middleName || '',
-      prefix: data.prefix || '', // Dr., Prof., Mr., Ms., etc.
+      prefix: englishName?.prefix || data.prefix || '', // Dr., Prof., Mr., Ms., etc.
       suffix: data.suffix || '', // MD, PhD, etc.
       age: data.age || null,
       gender: data.gender || '', // male, female, other, unknown
@@ -109,11 +147,14 @@ class PractitionerModel {
   validate() {
     const errors = [];
 
-    // Required demographics
-    if (!this.demographics.firstName) {
+    // Required demographics (English name)
+    const englishName = (this.demographics.names || []).find(
+      (entry) => entry.language === 'English',
+    );
+    if (!englishName?.firstName && !this.demographics.firstName) {
       errors.push('First name is required');
     }
-    if (!this.demographics.lastName) {
+    if (!englishName?.lastName && !this.demographics.lastName) {
       errors.push('Last name is required');
     }
     if (
@@ -261,3 +302,5 @@ class PractitionerModel {
 }
 
 module.exports = PractitionerModel;
+module.exports.normalizeLocalizedNames = normalizeLocalizedNames;
+module.exports.PRACTITIONER_LANGUAGES = PRACTITIONER_LANGUAGES;

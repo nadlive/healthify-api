@@ -31,7 +31,13 @@ const Practitioner = sequelize.define(
     lastName: {
       type: DataTypes.STRING,
     },
-    fee : {
+    // Multilingual names: [{ language, prefix, firstName, lastName }, ...]
+    // language1=English, language2=Sinhala, language3=Tamil
+    names: {
+      type: DataTypes.JSON,
+      allowNull: true,
+    },
+    fee: {
       type: DataTypes.STRING,
       allowNull: true,
     },
