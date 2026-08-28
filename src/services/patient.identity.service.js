@@ -25,6 +25,8 @@ class PatientService {
           address: patientData.demographics.address.street,
           country: patientData.demographics.address.country,
           timezone: patientData.demographics.timezone,
+          preferredLanguage:
+            patientData.demographics.preferredLanguage || 'language1',
         },
       });
 
@@ -36,6 +38,10 @@ class PatientService {
         patient.address = patientData.demographics.address.street;
         patient.country = patientData.demographics.address.country;
         patient.timezone = patientData.demographics.timezone;
+        if (patientData.demographics.preferredLanguage) {
+          patient.preferredLanguage =
+            patientData.demographics.preferredLanguage;
+        }
         await patient.save();
       }
 

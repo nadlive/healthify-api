@@ -1,43 +1,17 @@
 // models/practitioner.model.js
 
-const PRACTITIONER_LANGUAGES = ['English', 'Sinhala', 'Tamil'];
+const {
+  LANGUAGES,
+  normalizeLocalizedNames,
+  getPrimaryName,
+} = require('../constants/languages');
 
-const normalizeLocalizedNames = (data = {}) => {
-  if (Array.isArray(data.names) && data.names.length > 0) {
-    return PRACTITIONER_LANGUAGES.map((language) => {
-      const match = data.names.find(
-        (entry) =>
-          entry?.language === language ||
-          (language === 'English' && entry?.language === 'language1') ||
-          (language === 'Sinhala' && entry?.language === 'language2') ||
-          (language === 'Tamil' && entry?.language === 'language3'),
-      );
-      return {
-        language,
-        prefix: match?.prefix || '',
-        firstName: match?.firstName || '',
-        lastName: match?.lastName || '',
-      };
-    });
-  }
-
-  return [
-    {
-      language: 'English',
-      prefix: data.prefix || '',
-      firstName: data.firstName || '',
-      lastName: data.lastName || '',
-    },
-    { language: 'Sinhala', prefix: '', firstName: '', lastName: '' },
-    { language: 'Tamil', prefix: '', firstName: '', lastName: '' },
-  ];
-};
+const PRACTITIONER_LANGUAGES = Object.values(LANGUAGES);
 
 class PractitionerModel {
   constructor(data = {}) {
     const names = normalizeLocalizedNames(data);
-    const englishName =
-      names.find((entry) => entry.language === 'English') || names[0];
+    const englishName = getPrimaryName(names);
 
     // Demographics
     this.demographics = {
@@ -147,14 +121,12 @@ class PractitionerModel {
   validate() {
     const errors = [];
 
-    // Required demographics (English name)
-    const englishName = (this.demographics.names || []).find(
-      (entry) => entry.language === 'English',
-    );
-    if (!englishName?.firstName && !this.demographics.firstName) {
+    // Required demographics (language1 / English)
+    const primaryName = this.demographics.names?.language1 || {};
+    if (!primaryName?.firstName && !this.demographics.firstName) {
       errors.push('First name is required');
     }
-    if (!englishName?.lastName && !this.demographics.lastName) {
+    if (!primaryName?.lastName && !this.demographics.lastName) {
       errors.push('Last name is required');
     }
     if (

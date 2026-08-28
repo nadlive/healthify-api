@@ -174,12 +174,18 @@ const getAppointmentsForPatientService = async (patientId) => {
       {
         model: Practitioner,
         as: 'practitioner',
-        attributes: ['practitioner_id', 'prefix', 'firstName', 'lastName'],
+        attributes: [
+          'practitioner_id',
+          'prefix',
+          'firstName',
+          'lastName',
+          'names',
+        ],
         include: [
           {
             model: Speciality,
             as: 'specialities',
-            attributes: ['id', 'name'],
+            attributes: ['id', 'name', 'nameLanguage2', 'nameLanguage3'],
             through: { attributes: [] },
           },
         ],
@@ -251,12 +257,18 @@ const getAppointmentService = async (appointmentId) => {
       {
         model: Practitioner,
         as: 'practitioner',
-        attributes: ['practitioner_id', 'prefix', 'firstName', 'lastName'],
+        attributes: [
+          'practitioner_id',
+          'prefix',
+          'firstName',
+          'lastName',
+          'names',
+        ],
         include: [
           {
             model: Speciality,
             as: 'specialities',
-            attributes: ['id', 'name'],
+            attributes: ['id', 'name', 'nameLanguage2', 'nameLanguage3'],
             through: { attributes: [] },
           },
         ],

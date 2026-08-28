@@ -9,8 +9,8 @@ const Speciality = sequelize.define(
       primaryKey: true,
     },
     name: { type: DataTypes.STRING, allowNull: false },
-    nameSinhala: { type: DataTypes.STRING, allowNull: true },
-    nameTamil: { type: DataTypes.STRING, allowNull: true },
+    nameLanguage2: { type: DataTypes.STRING, allowNull: true },
+    nameLanguage3: { type: DataTypes.STRING, allowNull: true },
   },
   {
     tableName: 'specialities',

@@ -53,6 +53,11 @@ const Patient = sequelize.define(
     timezone: {
       type: DataTypes.STRING,
     },
+    preferredLanguage: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: 'language1',
+    },
     userId: {
       type: DataTypes.UUID,
       allowNull: false,
@@ -92,7 +97,7 @@ const Patient = sequelize.define(
         name: 'idx_user_id',
       },
     ],
-  }
+  },
 );
 
 module.exports = Patient;

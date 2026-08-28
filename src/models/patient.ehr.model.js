@@ -17,6 +17,7 @@ class PatientModel {
         country: data.address?.country || '',
       },
       timezone: data.timezone || '',
+      preferredLanguage: data.preferredLanguage || 'language1',
     };
 
     this.contactInfo = {

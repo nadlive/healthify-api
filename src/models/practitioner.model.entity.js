@@ -31,8 +31,9 @@ const Practitioner = sequelize.define(
     lastName: {
       type: DataTypes.STRING,
     },
-    // Multilingual names: [{ language, prefix, firstName, lastName }, ...]
-    // language1=English, language2=Sinhala, language3=Tamil
+    // Multilingual names keyed by locale slot:
+    // { language1: { prefix, firstName, lastName }, language2: {...}, language3: {...} }
+    // See src/constants/languages.js for language1/2/3 label mapping.
     names: {
       type: DataTypes.JSON,
       allowNull: true,

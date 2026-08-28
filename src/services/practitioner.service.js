@@ -5,26 +5,26 @@ const sequelize = require('../config/sequelize');
 const ProviderWorkingHours = require('../models/providerWorkingHours');
 const { sendConfirmationEmailToPractitioner } = require('./email.service');
 const { getActiveSubscriptionUsage } = require('./subscriptionUsage.service');
-const { normalizeLocalizedNames } = require('../models/practitioner.model');
+const {
+  normalizeLocalizedNames,
+  getPrimaryName,
+  mapSpecialityResponse,
+} = require('../constants/languages');
 
-const getEnglishName = (names = []) =>
-  names.find((entry) => entry.language === 'English') || names[0] || {};
+const SPECIALITY_ATTRIBUTES = ['id', 'name', 'nameLanguage2', 'nameLanguage3'];
 
 const buildFullName = ({ prefix, firstName, lastName }) =>
   [prefix, firstName, lastName].filter(Boolean).join(' ');
 
 const mapSpecialities = (specialities = []) =>
-  specialities.map((spec) => ({
-    id: spec.id,
-    name: spec.name,
-  }));
+  specialities.map((spec) => mapSpecialityResponse(spec));
 
 const mapPractitionerResponse = (practitionerData) => {
   const names = normalizeLocalizedNames(practitionerData);
-  const englishName = getEnglishName(names);
-  const prefix = englishName.prefix || practitionerData.prefix || '';
-  const firstName = englishName.firstName || practitionerData.firstName || '';
-  const lastName = englishName.lastName || practitionerData.lastName || '';
+  const primaryName = getPrimaryName(names);
+  const prefix = primaryName.prefix || practitionerData.prefix || '';
+  const firstName = primaryName.firstName || practitionerData.firstName || '';
+  const lastName = primaryName.lastName || practitionerData.lastName || '';
 
   return {
     practitionerId: practitionerData.practitioner_id,
@@ -45,13 +45,13 @@ const mapPractitionerResponse = (practitionerData) => {
 
 const resolveNameFields = (practitionerData = {}) => {
   const names = normalizeLocalizedNames(practitionerData);
-  const englishName = getEnglishName(names);
+  const primaryName = getPrimaryName(names);
 
   return {
     names,
-    prefix: englishName.prefix || null,
-    firstName: englishName.firstName || '',
-    lastName: englishName.lastName || '',
+    prefix: primaryName.prefix || null,
+    firstName: primaryName.firstName || '',
+    lastName: primaryName.lastName || '',
   };
 };
 
@@ -67,7 +67,7 @@ class PractitionerService {
         {
           model: Speciality,
           as: 'specialities',
-          attributes: ['id', 'name'],
+          attributes: SPECIALITY_ATTRIBUTES,
         },
       ],
     });
@@ -183,7 +183,7 @@ class PractitionerService {
         {
           model: Speciality,
           as: 'specialities',
-          attributes: ['id', 'name'],
+          attributes: SPECIALITY_ATTRIBUTES,
         },
       ],
     });
@@ -285,7 +285,7 @@ class PractitionerService {
               {
                 model: Speciality,
                 as: 'specialities',
-                attributes: ['id', 'name'],
+                attributes: SPECIALITY_ATTRIBUTES,
               },
             ],
           },
@@ -316,7 +316,7 @@ class PractitionerService {
           {
             model: Speciality,
             as: 'specialities',
-            attributes: ['id', 'name'],
+            attributes: SPECIALITY_ATTRIBUTES,
           },
         ],
       });

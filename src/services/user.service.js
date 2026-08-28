@@ -63,6 +63,8 @@ class UserService {
       // @ts-ignore
       practitionerId: practitioner?.practitioner_id || null,
       // @ts-ignore
+      preferredLanguage: patient?.preferredLanguage || 'language1',
+      // @ts-ignore
       isProfileCompleted: this.isProfileCompleted(patient),
       subscription,
       plan,
