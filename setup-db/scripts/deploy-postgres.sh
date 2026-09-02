@@ -6,7 +6,7 @@ if [[ -z "$EC2_INSTANCE_ID" ]] || [[ -z "$APP_AWS_REGION" ]] || [[ -z "$DB_USER"
     exit 1
 fi
 
-DB_NAME="healthify_db_v1"
+DB_NAME="healthify"
 SCHEMA_NAME="healthify"
 
 commands=$(cat << EOF

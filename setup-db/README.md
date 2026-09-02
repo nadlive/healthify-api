@@ -59,7 +59,7 @@ docker run --rm \
 
 The deployment creates:
 
-- Database: `healthify_db_v1`
+- Database: `healthify`
 - Schema: `healthify`
 
 ## 🔧 Environment Variables
