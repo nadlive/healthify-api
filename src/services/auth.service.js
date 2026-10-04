@@ -664,7 +664,6 @@ const generateTurnCredentials = (userId, ttl = 600) => {
 
 const STUN_SERVER = process.env.STUN_SERVER;
 const TURN_SERVER = process.env.TURN_SERVER;
-console.log("TURN_SERVER from env:", TURN_SERVER);
 
 const getIceServers = (userId, ttl = 600) => {
   const { username, credential } = generateTurnCredentials(userId, ttl);
