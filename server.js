@@ -25,11 +25,9 @@ const practitionerFilesRoute = require('./src/routes/practitionerFiles.routes');
 const prescriptionRoutes = require('./src/routes/prescription.routes');
 const refundRoutes = require('./src/routes/refund.routes');
 const chatRoutes = require('./src/routes/chat.routes');
-const {
-  subscriptionPlanRoutes,
-  userSubscriptionRoutes,
-  invoiceRoutes,
-} = require('./src/routes/index');
+const subscriptionPlanRoutes = require('./src/routes/subscriptionPlan.routes');
+const userSubscriptionRoutes = require('./src/routes/userSubscription.routes');
+const invoiceRoutes = require('./src/routes/invoice.routes');
 const cronAppointmentsRoutes = require('@/routes/cron.appointments.routes');
 const cronSubscriptionsRoutes = require('@/routes/cron.subscriptions.routes');
 

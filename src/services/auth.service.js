@@ -242,6 +242,8 @@ const loginUserService = async ({ email, password }) => {
         username: user.username,
         // @ts-ignore
         email: user.email,
+        // @ts-ignore
+        role: user.role,
       },
 
       success: true,
