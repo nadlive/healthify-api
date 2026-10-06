@@ -31,7 +31,7 @@ class PayHereGatewayService {
     appointmentId = null,
   }) {
     const formattedAmount = Number(amount).toFixed(2);
-    return {
+    const paymentData = {
       merchant_id: process.env.PAYHERE_MERCHANT_ID,
       return_url: process.env.PAYHERE_RETURN_URL,
       cancel_url: process.env.PAYHERE_CANCEL_URL,
@@ -52,6 +52,20 @@ class PayHereGatewayService {
 
       hash: this.generateHash(orderId, formattedAmount, currency),
     };
+
+    console.log('[PayHere checkout]', {
+      merchant_id: paymentData.merchant_id,
+      order_id: paymentData.order_id,
+      amount: paymentData.amount,
+      currency: paymentData.currency,
+      notify_url: paymentData.notify_url,
+      return_url: paymentData.return_url,
+      cancel_url: paymentData.cancel_url,
+      hash: paymentData.hash,
+      merchant_secret: process.env.PAYHERE_MERCHANT_SECRET,
+    });
+
+    return paymentData;
   }
 }
 
