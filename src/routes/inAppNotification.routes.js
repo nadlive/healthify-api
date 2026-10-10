@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const UserController = require('../controllers/user.controller');
+const controller = require('../controllers/inAppNotification.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
 
 router.use(authMiddleware);
 
-router.post('/fcm', UserController.saveFcmToken);
-router.get('/:userId', UserController.getUserProfile);
+router.get('/', controller.list);
+router.patch('/:id/read', controller.markRead);
 
 module.exports = router;

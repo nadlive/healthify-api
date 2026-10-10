@@ -7,6 +7,7 @@ const Practitioner = require('../models/practitioner.model.entity');
 const Speciality = require('../models/speciality.model');
 const { checkAndBookTimeSlot } = require('./timeSlot.service');
 const Patient = require('../models/patient.identity.model');
+const { notifyPractitioner } = require('./fcm.service');
 const { formatDateToTimezone } = require('../utils/date');
 const {
   UserSubscription,
@@ -614,6 +615,10 @@ const createChatAppointmentService = async (
     description,
     // @ts-ignore
     appointmentId: appointment.appointment_id,
+  });
+
+  notifyPractitioner(practitionerId, 'A chat started').catch((error) => {
+    console.warn('[FCM] chat started push failed', error?.message);
   });
 
   return { id: chat.id, chatId: chat.chatId };

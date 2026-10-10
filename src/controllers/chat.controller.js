@@ -10,6 +10,34 @@ class ChatController {
     res.json({ success: true, data: chat });
   }
 
+  async requestChat(req, res) {
+    const result = await chatService.requestChat(req.params.id, req.user.userId);
+    if (result.error === 'not_found') {
+      return res.status(404).json({ success: false, error: 'Chat not found' });
+    }
+    if (result.error === 'forbidden') {
+      return res.status(403).json({ success: false, error: 'Not allowed' });
+    }
+    if (result.error === 'closed') {
+      return res.status(400).json({ success: false, error: 'Chat is closed' });
+    }
+    res.json({ success: true, firstName: result.firstName || '' });
+  }
+
+  async readyForChat(req, res) {
+    const result = await chatService.readyForChat(req.params.id, req.user.userId);
+    if (result.error === 'not_found') {
+      return res.status(404).json({ success: false, error: 'Chat not found' });
+    }
+    if (result.error === 'forbidden') {
+      return res.status(403).json({ success: false, error: 'Not allowed' });
+    }
+    if (result.error === 'closed') {
+      return res.status(400).json({ success: false, error: 'Chat is closed' });
+    }
+    res.json({ success: true, firstName: result.firstName || '' });
+  }
+
   async searchChats(req, res) {
     const userId = req.user.userId;
     const { chatId, status } = req.query;

@@ -38,9 +38,11 @@ class UserService {
         where: { userId: userProfile.id, status: 'active' },
       });
 
-      plan = await SubscriptionPlan.findOne({
-        where: { id: subscription.planId },
-      });
+      if (subscription?.planId) {
+        plan = await SubscriptionPlan.findOne({
+          where: { id: subscription.planId },
+        });
+      }
     }
 
     return {
@@ -85,6 +87,14 @@ class UserService {
     user.isOverdue = status === 'overdue' ? true : false;
     await user.save();
     return user;
+  };
+
+  saveFcmToken = async (userId, token) => {
+    const [updated] = await User.unscoped().update(
+      { fcmToken: token },
+      { where: { id: userId } },
+    );
+    return updated > 0;
   };
 
   getUserByUserId = async (userId) => {

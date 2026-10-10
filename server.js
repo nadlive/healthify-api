@@ -25,6 +25,7 @@ const practitionerFilesRoute = require('./src/routes/practitionerFiles.routes');
 const prescriptionRoutes = require('./src/routes/prescription.routes');
 const refundRoutes = require('./src/routes/refund.routes');
 const chatRoutes = require('./src/routes/chat.routes');
+const inAppNotificationRoutes = require('./src/routes/inAppNotification.routes');
 const subscriptionPlanRoutes = require('./src/routes/subscriptionPlan.routes');
 const userSubscriptionRoutes = require('./src/routes/userSubscription.routes');
 const invoiceRoutes = require('./src/routes/invoice.routes');
@@ -89,6 +90,7 @@ app.use('/practitionerFiles', practitionerFilesRoute);
 app.use('/prescriptions', prescriptionRoutes);
 app.use('/refunds', refundRoutes);
 app.use('/chat', chatRoutes);
+app.use('/notifications', inAppNotificationRoutes);
 app.use('/cron/appointments', cronAppointmentsRoutes);
 app.use('/cron/subscriptions', cronSubscriptionsRoutes);
 app.use((err, req, res, _next) => {

@@ -6,6 +6,8 @@ const { authMiddleware } = require('../middleware/auth.middleware');
 router.use(authMiddleware);
 
 router.get('/', chatController.searchChats);
+router.post('/:id/request', chatController.requestChat);
+router.post('/:id/ready', chatController.readyForChat);
 router.get('/:id', chatController.getChatById);
 
 module.exports = router;

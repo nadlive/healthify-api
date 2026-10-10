@@ -78,10 +78,17 @@ const User = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    fcmToken: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
   },
   {
     tableName: 'users',
     timestamps: false,
+    defaultScope: {
+      attributes: { exclude: ['fcmToken'] },
+    },
     indexes: [
       {
         unique: true,

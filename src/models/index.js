@@ -27,6 +27,7 @@ const TimeSlot = require('./timeSlot');
 
 // Communication models
 const Chat = require('./chat')(sequelize);
+const InAppNotification = require('./inAppNotification.model');
 
 // Prescriptions models
 const Prescription = require('./prescriptionModel');
@@ -333,6 +334,7 @@ module.exports = {
   TimeSlot,
   // Communication
   Chat,
+  InAppNotification,
 
   // Prescriptions
   Prescription,

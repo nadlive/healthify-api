@@ -1,5 +1,7 @@
 node_modules
 .env
 .env copy.example
+firebase-service-account.json
+*-firebase-adminsdk-*.json
 .DS_Store
 dist
