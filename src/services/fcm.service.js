@@ -40,27 +40,57 @@ function init() {
   }
 }
 
-async function sendPush(token, body) {
-  if (!token || !init()) return;
-
-  await admin.messaging().send({
-    token,
-    notification: {
-      title: 'Healthify',
-      body,
-    },
-  });
-  console.log('[FCM] Push sent:', body);
+function tokenPrefix(token) {
+  return token ? `${String(token).slice(0, 12)}…` : '(none)';
 }
 
-async function notifyPractitioner(practitionerId, body) {
+async function sendPush(token, body, meta = {}) {
+  if (!token || !init()) {
+    console.log(
+      `[FCM] This: event=${meta.event || '?'} chatId=${meta.chatId || '-'} fromUserId=${meta.fromUserId || '-'}`,
+    );
+    console.log(
+      `[FCM] Send to: SKIPPED token=${tokenPrefix(token)} reason=${!token ? 'no-token' : 'fcm-not-init'}`,
+    );
+    return;
+  }
+
+  console.log(
+    `[FCM] This: event=${meta.event || '?'} chatId=${meta.chatId || '-'} fromUserId=${meta.fromUserId || '-'} body=${body}`,
+  );
+  console.log(
+    `[FCM] Send to: role=${meta.role || '?'} userId=${meta.userId || '-'} token=${tokenPrefix(token)}`,
+  );
+
+  try {
+    await admin.messaging().send({
+      token,
+      notification: {
+        title: 'Healthify',
+        body,
+      },
+    });
+    console.log('[FCM] Push sent OK');
+  } catch (error) {
+    console.warn(
+      `[FCM] Push failed code=${error?.code || '?'} message=${error?.message}`,
+    );
+  }
+}
+
+async function notifyPractitioner(practitionerId, body, meta = {}) {
   const Practitioner = require('../models/practitioner.model.entity');
   const User = require('../models/user.model');
   const practitioner = await Practitioner.findOne({
     where: { practitioner_id: practitionerId },
   });
   if (!practitioner?.userId) {
-    console.log('[FCM] No practitioner user for chat', practitionerId);
+    console.log(
+      `[FCM] This: event=${meta.event || '?'} chatId=${meta.chatId || '-'} fromUserId=${meta.fromUserId || '-'}`,
+    );
+    console.log(
+      `[FCM] Send to: role=practitioner practitionerId=${practitionerId} SKIPPED (no userId)`,
+    );
     return;
   }
 
@@ -69,22 +99,35 @@ async function notifyPractitioner(practitionerId, body) {
     attributes: ['fcmToken'],
   });
   if (!recipient?.fcmToken) {
-    console.log('[FCM] Practitioner has no saved token', practitioner.userId);
+    console.log(
+      `[FCM] This: event=${meta.event || '?'} chatId=${meta.chatId || '-'} fromUserId=${meta.fromUserId || '-'}`,
+    );
+    console.log(
+      `[FCM] Send to: role=practitioner userId=${practitioner.userId} SKIPPED (no saved token)`,
+    );
     return;
   }
 
-  console.log('[FCM] Sending push to practitioner', practitioner.userId, body);
-  await sendPush(recipient.fcmToken, body);
+  await sendPush(recipient.fcmToken, body, {
+    ...meta,
+    role: 'practitioner',
+    userId: practitioner.userId,
+  });
 }
 
-async function notifyPatient(patientId, body) {
+async function notifyPatient(patientId, body, meta = {}) {
   const Patient = require('../models/patient.identity.model');
   const User = require('../models/user.model');
   const patient = await Patient.findOne({
     where: { patient_id: patientId },
   });
   if (!patient?.userId) {
-    console.log('[FCM] No patient user for chat', patientId);
+    console.log(
+      `[FCM] This: event=${meta.event || '?'} chatId=${meta.chatId || '-'} fromUserId=${meta.fromUserId || '-'}`,
+    );
+    console.log(
+      `[FCM] Send to: role=patient patientId=${patientId} SKIPPED (no userId)`,
+    );
     return;
   }
 
@@ -93,12 +136,20 @@ async function notifyPatient(patientId, body) {
     attributes: ['fcmToken'],
   });
   if (!recipient?.fcmToken) {
-    console.log('[FCM] Patient has no saved token', patient.userId);
+    console.log(
+      `[FCM] This: event=${meta.event || '?'} chatId=${meta.chatId || '-'} fromUserId=${meta.fromUserId || '-'}`,
+    );
+    console.log(
+      `[FCM] Send to: role=patient userId=${patient.userId} SKIPPED (no saved token)`,
+    );
     return;
   }
 
-  console.log('[FCM] Sending push to patient', patient.userId, body);
-  await sendPush(recipient.fcmToken, body);
+  await sendPush(recipient.fcmToken, body, {
+    ...meta,
+    role: 'patient',
+    userId: patient.userId,
+  });
 }
 
 module.exports = { notifyPractitioner, notifyPatient };

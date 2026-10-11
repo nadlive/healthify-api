@@ -61,7 +61,18 @@ class ChatService {
         ? `${firstName} is ready to chat`
         : 'A patient is ready to chat';
 
-    await notifyPractitioner(chat.practitionerId, pushBody);
+    console.log(
+      `[Chat] This: event=requestChat chatId=${chat.id} status=${chat.status} fromUserId=${userId}`,
+    );
+    console.log(
+      `[Chat] Send to: practitionerId=${chat.practitionerId} practitionerUserId=${practitioner?.userId || '-'} (FCM + in-app)`,
+    );
+
+    await notifyPractitioner(chat.practitionerId, pushBody, {
+      event: 'requestChat',
+      chatId: chat.id,
+      fromUserId: userId,
+    });
     await inAppNotificationService
       .create({
         userId: practitioner?.userId,
@@ -71,7 +82,10 @@ class ChatService {
         personName,
       })
       .catch((error) => {
-        console.warn('[Notifications] Could not store chat request', error?.message);
+        console.warn(
+          '[Notifications] Could not store chat request',
+          error?.message,
+        );
       });
     return { ok: true, firstName };
   }
@@ -102,7 +116,18 @@ class ChatService {
       attributes: ['userId'],
     });
 
-    await notifyPatient(chat.patientId, pushBody);
+    console.log(
+      `[Chat] This: event=readyForChat chatId=${chat.id} status=${chat.status} fromUserId=${userId}`,
+    );
+    console.log(
+      `[Chat] Send to: patientId=${chat.patientId} patientUserId=${patient?.userId || '-'} (FCM + in-app; chat status NOT changed here — still ${chat.status})`,
+    );
+
+    await notifyPatient(chat.patientId, pushBody, {
+      event: 'readyForChat',
+      chatId: chat.id,
+      fromUserId: userId,
+    });
     await inAppNotificationService
       .create({
         userId: patient?.userId,
@@ -112,7 +137,10 @@ class ChatService {
         personName,
       })
       .catch((error) => {
-        console.warn('[Notifications] Could not store ready notice', error?.message);
+        console.warn(
+          '[Notifications] Could not store ready notice',
+          error?.message,
+        );
       });
     return { ok: true, firstName };
   }

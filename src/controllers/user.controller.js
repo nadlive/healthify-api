@@ -8,15 +8,23 @@ class UserController {
   }
 
   async saveFcmToken(req, res) {
-    const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
+    const token =
+      typeof req.body?.token === 'string' ? req.body.token.trim() : '';
     if (!token || token.length > 4096) {
-      return res.status(400).json({ success: false, error: 'token is required' });
+      return res
+        .status(400)
+        .json({ success: false, error: 'token is required' });
     }
 
     const saved = await userService.saveFcmToken(req.user.userId, token);
     if (!saved) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
+
+    console.log(`[FCM] This: event=saveToken userId=${req.user.userId}`);
+    console.log(
+      `[FCM] Send to: stored token=${token.slice(0, 12)}… (overwrites previous device for this user)`,
+    );
 
     res.status(200).json({ success: true });
   }
