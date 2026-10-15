@@ -57,14 +57,32 @@ class ChatService {
         ? `${firstName} is ready to chat`
         : 'A patient is ready to chat';
 
-    await notifyPractitioner(chat.practitionerId, pushBody);
-    await inAppNotificationService.create({
-      userId: practitioner?.userId,
+    console.log(
+      `[Chat] This: event=requestChat chatId=${chat.id} status=${chat.status} fromUserId=${userId}`,
+    );
+    console.log(
+      `[Chat] Send to: practitionerId=${chat.practitionerId} practitionerUserId=${practitioner?.userId || '-'} (FCM + in-app)`,
+    );
+
+    await notifyPractitioner(chat.practitionerId, pushBody, {
+      event: 'requestChat',
       chatId: chat.id,
-      title: 'Chat request',
-      body: `${personName} would like to chat`,
-      personName,
+      fromUserId: userId,
     });
+    await inAppNotificationService
+      .create({
+        userId: practitioner?.userId,
+        chatId: chat.id,
+        title: 'Chat request',
+        body: `${personName} would like to chat`,
+        personName,
+      })
+      .catch((error) => {
+        console.warn(
+          '[Notifications] Could not store chat request',
+          error?.message,
+        );
+      });
     return { ok: true, firstName };
   }
 
@@ -94,14 +112,32 @@ class ChatService {
       attributes: ['userId'],
     });
 
-    await notifyPatient(chat.patientId, pushBody);
-    await inAppNotificationService.create({
-      userId: patient?.userId,
+    console.log(
+      `[Chat] This: event=readyForChat chatId=${chat.id} status=${chat.status} fromUserId=${userId}`,
+    );
+    console.log(
+      `[Chat] Send to: patientId=${chat.patientId} patientUserId=${patient?.userId || '-'} (FCM + in-app; chat status NOT changed here — still ${chat.status})`,
+    );
+
+    await notifyPatient(chat.patientId, pushBody, {
+      event: 'readyForChat',
       chatId: chat.id,
-      title: 'Ready to chat',
-      body: `${personName} is ready to chat`,
-      personName,
+      fromUserId: userId,
     });
+    await inAppNotificationService
+      .create({
+        userId: patient?.userId,
+        chatId: chat.id,
+        title: 'Ready to chat',
+        body: `${personName} is ready to chat`,
+        personName,
+      })
+      .catch((error) => {
+        console.warn(
+          '[Notifications] Could not store ready notice',
+          error?.message,
+        );
+      });
     return { ok: true, firstName };
   }
 }

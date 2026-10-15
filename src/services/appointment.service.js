@@ -707,7 +707,17 @@ const createChatAppointmentService = async (
     appointmentId: appointment.appointment_id,
   });
 
-  notifyPractitioner(practitionerId, 'A chat started').catch((error) => {
+  console.log(
+    `[Chat] This: event=chatStarted chatId=${chat.id} status=${chat.status} fromUserId=${userId}`,
+  );
+  console.log(
+    `[Chat] Send to: practitionerId=${practitionerId} (FCM "A chat started")`,
+  );
+  notifyPractitioner(practitionerId, 'A chat started', {
+    event: 'chatStarted',
+    chatId: chat.id,
+    fromUserId: userId,
+  }).catch((error) => {
     console.warn('[FCM] chat started push failed', error?.message);
   });
 
