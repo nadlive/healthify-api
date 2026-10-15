@@ -7,7 +7,8 @@ const Practitioner = require('../models/practitioner.model.entity');
 const Speciality = require('../models/speciality.model');
 const { checkAndBookTimeSlot } = require('./timeSlot.service');
 const Patient = require('../models/patient.identity.model');
-const { notifyPractitioner } = require('./fcm.service');
+const { notifyPractitioner, notifyPatient } = require('./fcm.service');
+const inAppNotificationService = require('./inAppNotification.service');
 const { formatDateToTimezone } = require('../utils/date');
 const {
   UserSubscription,
@@ -23,6 +24,27 @@ const { GUEST_PLAN_ID } = require('../constants/PLAN');
 const userService = require('./user.service');
 const invoiceService = require('./invoice.service');
 const { APPOINTMENT_STATUSES_COUNTED } = require('../constants/APPOINTMENT');
+function appointmentNotice(name, namedText, genericText) {
+  const firstName = String(name || '').trim();
+  const personName = firstName || null;
+  const body =
+    firstName && firstName.length <= 20 ? `${firstName} ${namedText}` : genericText;
+  return { personName, body };
+}
+
+async function notifyAboutAppointment({
+  practitionerId,
+  patientId,
+  userId,
+  title,
+  body,
+  personName,
+}) {
+  if (practitionerId) await notifyPractitioner(practitionerId, body);
+  if (patientId) await notifyPatient(patientId, body);
+  await inAppNotificationService.create({ userId, title, body, personName });
+}
+
 async function getFreeAppointmentUsageCount(
   patientId,
   fromDate,
@@ -154,6 +176,19 @@ const createAppointmentService = async (appointmentData) => {
     }
 
     await transaction.commit();
+
+    const notice = appointmentNotice(
+      patient.firstName,
+      'booked an appointment',
+      'A patient booked an appointment',
+    );
+    await notifyAboutAppointment({
+      practitionerId: scheduledTimeSlot.provider.practitioner_id,
+      userId: scheduledTimeSlot.provider.userId,
+      title: 'New appointment',
+      body: notice.body,
+      personName: notice.personName,
+    });
 
     return {
       appointment: appointment.dataValues,
@@ -309,7 +344,12 @@ const declineAppointmentService = async (appointmentId, userId) => {
       {
         model: Practitioner,
         as: 'practitioner',
-        attributes: ['practitioner_id', 'userId'],
+        attributes: ['practitioner_id', 'userId', 'firstName'],
+      },
+      {
+        model: Patient,
+        as: 'patient',
+        attributes: ['userId', 'patient_id'],
       },
       { model: TimeSlot, as: 'timeSlot', attributes: ['time_slot_id'] },
     ],
@@ -350,6 +390,19 @@ const declineAppointmentService = async (appointmentId, userId) => {
 
   await transaction.commit();
 
+  const notice = appointmentNotice(
+    appointment.practitioner.firstName,
+    'cancelled your appointment',
+    'Your appointment was cancelled',
+  );
+  await notifyAboutAppointment({
+    patientId: appointment.patient.patient_id,
+    userId: appointment.patient.userId,
+    title: 'Appointment cancelled',
+    body: notice.body,
+    personName: notice.personName,
+  });
+
   return appointment;
 };
 
@@ -365,6 +418,11 @@ const cancelAppointmentService = async (appointmentId, userId) => {
           model: Patient,
           as: 'patient',
           attributes: ['userId', 'patient_id', 'firstName', 'lastName'],
+        },
+        {
+          model: Practitioner,
+          as: 'practitioner',
+          attributes: ['practitioner_id', 'userId'],
         },
       ],
     });
@@ -469,6 +527,19 @@ const cancelAppointmentService = async (appointmentId, userId) => {
 
     await transaction.commit();
 
+    const notice = appointmentNotice(
+      appointment.patient.firstName,
+      'cancelled an appointment',
+      'A patient cancelled an appointment',
+    );
+    await notifyAboutAppointment({
+      practitionerId: appointment.practitioner.practitioner_id,
+      userId: appointment.practitioner.userId,
+      title: 'Appointment cancelled',
+      body: notice.body,
+      personName: notice.personName,
+    });
+
     return {
       success: true,
     };
@@ -489,6 +560,11 @@ const confirmAppointmentService = async (appointmentId, userId) => {
           model: Patient,
           as: 'patient',
           attributes: ['userId', 'patient_id', 'firstName', 'lastName'],
+        },
+        {
+          model: Practitioner,
+          as: 'practitioner',
+          attributes: ['firstName'],
         },
       ],
       transaction,
@@ -548,6 +624,20 @@ const confirmAppointmentService = async (appointmentId, userId) => {
     );
 
     await transaction.commit();
+
+    const notice = appointmentNotice(
+      appointment.practitioner.firstName,
+      'confirmed your appointment',
+      'Your appointment is confirmed',
+    );
+    await notifyAboutAppointment({
+      patientId: appointment.patient.patient_id,
+      userId: appointment.patient.userId,
+      title: 'Appointment confirmed',
+      body: notice.body,
+      personName: notice.personName,
+    });
+
     return { message: 'Appointment confirmed successfully' };
   } catch (error) {
     await transaction.rollback();
