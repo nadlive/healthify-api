@@ -13,8 +13,67 @@ const {
 const { getBillingPeriodDates } = require('../utils/bill.utils');
 const invoiceOperationService = require('./invoice.operation.service');
 const { getSubscriptionPeriod } = require('./subscriptionUsage.service');
+const { buildGatewayProof } = require('../utils/billing.metadata');
 
 class PaymentService {
+  /**
+   * Persist PayHere notify proof on payment.metadata.gateway and a linked Transaction.
+   */
+  async attachGatewayProof(paymentId, notifyBody = {}, options = {}) {
+    const { failed = false } = options;
+    const payment = await Payment.findByPk(paymentId);
+    if (!payment) return null;
+
+    const gateway = buildGatewayProof(notifyBody);
+    const nextMetadata = {
+      ...(payment.metadata || {}),
+      gateway,
+    };
+
+    let transactionRecord = null;
+    if (payment.transactionId) {
+      transactionRecord = await Transaction.findByPk(payment.transactionId);
+    }
+
+    const txnStatus = failed ? 'failed' : 'completed';
+    const txnPayload = {
+      userId: payment.userId,
+      amount: payment.amount,
+      currency: notifyBody.payhere_currency || 'LKR',
+      type:
+        payment.metadata?.type === 'subscription_upgrade' ||
+        payment.metadata?.type === 'subscription_new'
+          ? 'subscription'
+          : payment.metadata?.type === 'appointment_guest_payment'
+            ? 'appointment'
+            : 'bill',
+      status: txnStatus,
+      paymentGateway: 'payhere',
+      gatewayTransactionId: String(
+        notifyBody.payment_id || notifyBody.order_id || payment.id,
+      ),
+      gatewayResponse: notifyBody,
+      description: payment.description || payment.reason || 'PayHere payment',
+      appointmentId: payment.metadata?.appointmentId || null,
+      failureReason: failed
+        ? `PayHere status_code=${notifyBody.status_code}`
+        : null,
+    };
+
+    if (transactionRecord) {
+      await transactionRecord.update(txnPayload);
+    } else {
+      transactionRecord = await Transaction.create(txnPayload);
+      payment.transactionId = transactionRecord.id;
+    }
+
+    payment.metadata = nextMetadata;
+    payment.changed('metadata', true);
+    await payment.save();
+
+    return { payment, transaction: transactionRecord };
+  }
+
   async finalizeBillPayment(paymentId) {
     const transaction = await sequelize.transaction();
 
@@ -164,6 +223,14 @@ class PaymentService {
       payment.paidAt = new Date();
       payment.subscriptionUsageId = usage.id;
       payment.invoiceId = invoice.id;
+      payment.transactionId = payment.transactionId || transactionRecord.id;
+      payment.metadata = {
+        ...(payment.metadata || {}),
+        planId,
+        subscriptionId: subscription.id,
+        subscriptionUsageId: usage.id,
+      };
+      payment.changed('metadata', true);
       await payment.save({ transaction });
 
       await transaction.commit();
@@ -257,6 +324,13 @@ class PaymentService {
       payment.paidAt = new Date();
       payment.subscriptionUsageId = usage.id;
       payment.invoiceId = invoice.id;
+      payment.metadata = {
+        ...(payment.metadata || {}),
+        planId: newPlan.id,
+        subscriptionId: newSubscription.id,
+        subscriptionUsageId: usage.id,
+      };
+      payment.changed('metadata', true);
       await payment.save({ transaction });
 
       await transaction.commit();
@@ -299,7 +373,7 @@ class PaymentService {
     }
   }
 
-  async updatePaymentToFailed(paymentId) {
+  async updatePaymentToFailed(paymentId, notifyBody = null) {
     const payment = await Payment.findByPk(paymentId);
 
     if (payment && payment.status === 'pending') {
@@ -307,6 +381,9 @@ class PaymentService {
         status: 'failed',
         failedAt: new Date(),
       });
+      if (notifyBody) {
+        await this.attachGatewayProof(paymentId, notifyBody, { failed: true });
+      }
     }
   }
 

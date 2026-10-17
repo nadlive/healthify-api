@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const paymentService = require('../services/payment.service');
 const { Payment } = require('../models');
+const { PAYMENT_TYPES } = require('../utils/billing.metadata');
 
 class PaymentNotifyController {
   async payHereNotify(req, res) {
@@ -37,7 +38,7 @@ class PaymentNotifyController {
     }
 
     if (status_code !== '2') {
-      await paymentService.updatePaymentToFailed(order_id);
+      await paymentService.updatePaymentToFailed(order_id, req.body);
       return res.status(200).send('Payment not successful');
     }
 
@@ -46,15 +47,18 @@ class PaymentNotifyController {
       return res.status(200).send('Payment not found');
     }
 
+    // Always keep gateway proof for successful notify before finalize.
+    await paymentService.attachGatewayProof(order_id, req.body);
+
     const type = payment.metadata?.type;
 
-    if (type === 'bill') {
+    if (type === PAYMENT_TYPES.BILL) {
       await paymentService.finalizeBillPayment(order_id);
-    } else if (type === 'subscription_upgrade') {
+    } else if (type === PAYMENT_TYPES.SUBSCRIPTION_UPGRADE) {
       await paymentService.finalizeSubscriptionUpgrade(order_id);
-    } else if (type === 'subscription_new') {
+    } else if (type === PAYMENT_TYPES.SUBSCRIPTION_NEW) {
       await paymentService.finalizeNewSubscription(order_id);
-    } else if (type === 'appointment_guest_payment') {
+    } else if (type === PAYMENT_TYPES.APPOINTMENT_GUEST) {
       await paymentService.finalizeAppointmentPayment(order_id);
     } else {
       console.warn('⚠️ Unknown payment type:', type);

@@ -42,11 +42,18 @@ class UserSubscriptionController {
       return res.json({ success: true });
     }
 
+    const {
+      buildPaymentMetadata,
+      PAYMENT_TYPES,
+    } = require('../utils/billing.metadata');
     const payment = await paymentService.makePayment(
       userId,
       newPlan.price,
       null,
-      { method: 'payhere', type: 'subscription_upgrade', planId: newPlan.id },
+      buildPaymentMetadata({
+        type: PAYMENT_TYPES.SUBSCRIPTION_UPGRADE,
+        planId: newPlan.id,
+      }),
       `Subscription - ${newPlan.displayName}`,
       'pending',
       transaction,

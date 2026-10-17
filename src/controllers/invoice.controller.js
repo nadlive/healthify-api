@@ -5,6 +5,10 @@ const {
   SubscriptionPlan,
 } = require('../models');
 const invoiceService = require('../services/invoice.service');
+const {
+  buildInvoiceCustomerSnapshot,
+  mergeInvoiceMetadata,
+} = require('../utils/billing.metadata');
 const path = require('path');
 const fs = require('fs');
 
@@ -37,6 +41,10 @@ class InvoiceController {
         },
       ];
 
+      const customerSnapshot = await buildInvoiceCustomerSnapshot(
+        transaction.userId,
+      );
+
       // Create invoice
       const invoice = await Invoice.create({
         userId: transaction.userId,
@@ -46,11 +54,12 @@ class InvoiceController {
         tax: 0,
         discount: 0,
         total: transaction.amount,
-        currency: transaction.currency,
+        currency: transaction.currency || 'LKR',
         status: transaction.status === 'completed' ? 'paid' : 'issued',
         issuedAt: new Date(),
         paidAt: transaction.status === 'completed' ? new Date() : null,
         lineItems,
+        metadata: mergeInvoiceMetadata({}, customerSnapshot),
       });
 
       res.status(201).json({

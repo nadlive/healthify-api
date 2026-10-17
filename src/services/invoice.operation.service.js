@@ -1,5 +1,9 @@
 const { Op } = require('sequelize');
 const { Invoice, InvoiceItem } = require('../models');
+const {
+  buildInvoiceCustomerSnapshot,
+  mergeInvoiceMetadata,
+} = require('../utils/billing.metadata');
 
 class InvoiceOperationService {
   async generateInvoiceNumber() {
@@ -43,6 +47,11 @@ class InvoiceOperationService {
     const status =
       dueAmount === 0 ? 'paid' : paidAmount === 0 ? 'draft' : 'partially_paid';
 
+    const customerSnapshot = await buildInvoiceCustomerSnapshot(
+      userId,
+      transaction,
+    );
+
     const invoice = await Invoice.create(
       {
         invoiceNumber,
@@ -56,13 +65,21 @@ class InvoiceOperationService {
         dueAmount,
         invoiceActiveStatus: true,
         total: plan.price,
-        currency: plan.currency,
+        currency: plan.currency || 'LKR',
         transactionId: transactionRecord?.id ?? null,
         status,
         paidAt: paidAmount > 0 ? new Date() : null,
         issuedAt: new Date(),
         periodStart: billingStartDate,
         periodEnd: billingEndDate,
+        metadata: mergeInvoiceMetadata(
+          {
+            planId: plan.id,
+            subscriptionId: subscription_usage.subscriptionId,
+            subscriptionUsageId: subscription_usage.id,
+          },
+          customerSnapshot,
+        ),
       },
       { transaction: transaction },
     );
@@ -95,6 +112,11 @@ class InvoiceOperationService {
       charge = 0;
     }
 
+    const customerSnapshot = await buildInvoiceCustomerSnapshot(
+      userId,
+      transaction,
+    );
+
     const invoice = await Invoice.create(
       {
         invoiceNumber,
@@ -110,9 +132,12 @@ class InvoiceOperationService {
         status: isFree ? 'paid' : 'issued',
         issuedAt: new Date(),
         lineItems: [],
-        metadata: {
-          appointment,
-        },
+        metadata: mergeInvoiceMetadata(
+          {
+            appointmentId: appointment.appointment_id,
+          },
+          customerSnapshot,
+        ),
       },
       { transaction },
     );

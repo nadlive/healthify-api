@@ -8,6 +8,7 @@ const { authMiddleware } = require('../middleware/auth.middleware');
 router.use(authMiddleware);
 router.post('/', practitionerController.createPractitioner);
 router.get('/active', practitionerController.getActivePractitioners);
+router.get('/me/dashboard', practitionerController.getMyDashboard);
 router.get('/', practitionerController.searchPractitioners);
 router.get('/:id', practitionerController.getPractitioner);
 router.put('/:id', practitionerController.updatePractitioner);

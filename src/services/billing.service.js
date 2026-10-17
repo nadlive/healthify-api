@@ -205,8 +205,6 @@ class BillingService {
       throw new Error('Patient profile not found for user');
     }
 
-    const type = appointmentId ? 'appointment_guest_payment' : 'bill';
-
     if (appointmentId) {
       const appointment = await Appointment.findOne({
         where: { appointment_id: appointmentId },
@@ -221,11 +219,20 @@ class BillingService {
 
     const invoice = await invoiceService.getActiveInvoice(userId);
     invoice.amount = amount;
+    const {
+      buildPaymentMetadata,
+      PAYMENT_TYPES,
+    } = require('../utils/billing.metadata');
     const payment = await paymentService.makePayment(
       userId,
       amount,
       invoice.id,
-      { method: 'payhere', type: type, appointmentId: appointmentId },
+      buildPaymentMetadata({
+        type: appointmentId
+          ? PAYMENT_TYPES.APPOINTMENT_GUEST
+          : PAYMENT_TYPES.BILL,
+        appointmentId,
+      }),
       `Bill Payment - ${invoice.patient.firstName} ${invoice.patient.lastName}`,
       'pending',
       transaction,

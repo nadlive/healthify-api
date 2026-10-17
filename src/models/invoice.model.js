@@ -73,6 +73,13 @@ module.exports = (sequelize) => {
         allowNull: true,
         comment: 'User billing address',
       },
+      metadata: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: {},
+        comment:
+          'Invoice extras, including customer snapshot at issue time: { customer: { patientId, email, phone, name } }',
+      },
       notes: {
         type: DataTypes.TEXT,
         allowNull: true,

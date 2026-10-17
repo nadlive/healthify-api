@@ -1,6 +1,27 @@
 // controllers/practitioner.controller.js
 const practitionerService = require('../services/practitioner.service');
+const practitionerDashboardService = require('../services/practitionerDashboard.service');
+
 class PractitionerController {
+  async getMyDashboard(req, res) {
+    try {
+      const timezone =
+        typeof req.query.timezone === 'string' && req.query.timezone
+          ? req.query.timezone
+          : 'UTC';
+      const dashboard = await practitionerDashboardService.getDashboardForUser(
+        req.user.userId,
+        { timezone },
+      );
+      res.status(200).json({ success: true, data: dashboard });
+    } catch (error) {
+      res.status(error.status || 500).json({
+        success: false,
+        message: error.message || 'Failed to load provider dashboard',
+      });
+    }
+  }
+
   async getActivePractitioners(req, res) {
     const userId = req.user.userId;
     const practitioners =
